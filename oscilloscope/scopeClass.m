@@ -8,7 +8,7 @@ classdef scopeClass<handle
 %		- rawWrite(comm)				// Write given command on SCPI
 %		- data = rawWR(comm)			// Write command and get output
 %		- waitForOPC()
-%		- idn 							// Return IDN of device
+%		- idn()							// Return IDN of device
 %		- setTrigger(chan, varargin)	// Set trigger channel, level, slope
 %		- dispChannel(chan)				// Display one given channel
 %		- dispChannels(chans)			// Display multiple channels
