@@ -1,12 +1,13 @@
-% Characterize the probe sensor
-%% Static acquisition
+%% Characterize the probe sensor with input amplitude swing
+% Sensor 
+% Change 
 clc;clear;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % USER DEFINE SETTINGS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 psu_visa_str = "TCPIP0::192.168.158.116::inst0::INSTR";
-scope_visa_str = "TCPIP0::192.168.158.77::inst0::INSTR";
+scope_visa_str = "TCPIP0::192.168.158.34::inst0::INSTR";
 awg_visa_str = "TCPIP0::192.168.158.115::inst0::INSTR";
 
 % Set MAX watching time in s
@@ -24,20 +25,22 @@ avr = true;
 avr_cnt = 10;
 
 % Set channels to acquire in array
-chs = [1 2 3];
+chs = [3 4 5 6];
 % Set correspondent channel names
-chs_names = ["Vsens" "Csens" "AWG"];
-chs_vdiv = [0.05 0.2 0.5];
+chs_names = ["Csens" "DriverOut" "Vsens" "AWG"];
+chs_vdiv = [0.4 4 4/25 1];
 
 % Set trigger source
 % Format: [<trig_chan> <trig_voltage> <ris/fal>]
 % 	1 fo rising edge ; -1 for falling edge ; 0 for either
-trig = [3 0.0 1];
+trig = [6 1 1];
 
 % PSU channel used for circuit power supply
-psu_suppl_ch = [2 3];
+psu_suppl_ch = [1 2 3];
+psu_suppl_vl = [7 30 2];
+psu_track = false;
 % Voltage for logic power supply
-cv_supply = 15;
+cv_supply = [];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % --------------- DO NOT EDIT --------------------- %
@@ -45,13 +48,13 @@ cv_supply = 15;
 addpath("oscilloscope");
 
 % Max # of points the scope can get
-max_points = 32768;
-max_sr = 4e9;
+max_points = 100e3;
+max_sr = 6.25e9;
 
 % Define all possible volt scales
-volt_scale = [0.02 0.05 0.1 0.2 0.5 1 2];
+volt_scale = [0.02 0.05 0.1 0.2 0.5 1 2 5 10];
 % Index for volt_scale[] for each channel
-chs_volts = [6 6 6 6];
+chs_volts = [6 6 6 6 6 6 6];
 
 % Initialize instrument connections
 %if exist('scope', 'var') ~= 1
@@ -76,24 +79,23 @@ psu.init(psu_visa_str);
 scope.setTrigger(trig(1), trig(2));
 
 % SET PSU
-if length(psu_suppl_ch) == 2
+if psu_track == true
 	psu.setTrack("ON");
-	psu.setVoltage(psu_suppl_ch(1), cv_supply);
+	psu.setVoltage(2, psu_suppl_vl(find(psu_suppl_ch==2)));
 else
-	psu.setVoltage(psu_suppl_ch, cv_supply);
+	for ch=1:length(psu_suppl_ch)
+		psu.setVoltage(psu_suppl_ch(ch), psu_suppl_vl(ch));
+	end
 end
 
 % Enable circuit power supply
-if length(psu_suppl_ch) == 2
-	psu.setOnOff(psu_suppl_ch(1), 1);
-else
-	psu.setOnOff(psu_suppl_ch, 1);
+for ch=psu_suppl_ch
+	psu.setOnOff(ch, 1);
 end
+% END PSU
 
 x = input("Enable the driver and press y: ", 's');
 clear x
-
-% END PSU
 
 % Enable channels
 scope.dispChannels(chs);
@@ -103,15 +105,15 @@ scope.setAutoSN(max_points);
 
 scope.setTimeFromFreq(awg_freq);
 
-scope.rawWrite(":SYSTEM:HEADER OFF");
-scope.rawWrite(":WAV:TYPE RAW");
-scope.rawWrite(":ACQUIRE:MODE RTIME");
-scope.rawWrite(":ACQ:INTerpolate OFF");
+%scope.rawWrite(":SYSTEM:HEADER OFF");
+%scope.rawWrite(":WAV:TYPE RAW");
+%scope.rawWrite(":ACQUIRE:MODE RTIME");
+%scope.rawWrite(":ACQ:INTerpolate OFF");
 
 % Enable/Disable average acquisition
 scope.setAvrAcq(avr, avr_cnt);
 
-scope.rawWrite(":WAVeform:FORMat ASC");
+%scope.rawWrite(":WAVeform:FORMat ASC");
 
 %psu.setCurrent(psu_meas_ch, curr_array(1));
 %psu.setOnOff(psu_meas_ch, 1); % Turn on channel
